@@ -239,9 +239,21 @@
             margin: 8px 0;
         }
         
+        .record-player {
+            flex: 1;
+        }
+        
         .record-score {
             color: #feca57;
             font-weight: bold;
+            min-width: 80px;
+            text-align: right;
+        }
+        
+        .record-date {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 2px;
         }
         
         .no-records {
@@ -249,6 +261,22 @@
             color: #888;
             font-style: italic;
             margin: 20px 0;
+        }
+        
+        .player-name-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            color: white;
+            padding: 12px;
+            font-size: 1rem;
+            width: 100%;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .player-name-input::placeholder {
+            color: #aaa;
         }
     </style>
 </head>
@@ -269,7 +297,7 @@
         
         <div style="margin-top: 30px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;">
             <div style="font-size: 0.9rem; opacity: 0.8;">
-                🎯 Лучший счет: <span id="bestScoreMenu">0</span>
+                🎯 Ваш лучший счет: <span id="bestScoreMenu">0</span>
             </div>
         </div>
     </div>
@@ -319,12 +347,12 @@
         <div class="menu-title">🏆 РЕКОРДЫ</div>
         
         <div class="records-content">
-            <h3>🏅 Лучшие результаты</h3>
-            <div id="recordsList">
-                <!-- Рекорды будут загружаться здесь -->
+            <h3>🏅 Топ-10 игроков</h3>
+            <div id="globalRecordsList">
+                <!-- Глобальные рекорды будут здесь -->
             </div>
             
-            <h3>📊 Статистика</h3>
+            <h3>📊 Ваша статистика</h3>
             <div class="record-item">
                 <span>Лучший счет:</span>
                 <span class="record-score" id="bestScore">0</span>
@@ -368,17 +396,6 @@
                 <li>Ускоренное падение: <strong>+1 очко за шаг</strong></li>
                 <li>Мгновенное падение: <strong>+2 очка за шаг</strong></li>
             </ul>
-            
-            <h3>🚀 Уровни сложности</h3>
-            <p>Каждые 10 очищенных линий уровень увеличивается. С каждым уровнем фигуры падают быстрее!</p>
-            
-            <h3>💡 Советы</h3>
-            <ul>
-                <li>Старайтесь делать Tetris (4 линии сразу) для максимальных очков</li>
-                <li>Оставляйте место для длинных фигур</li>
-                <li>Не накапливайте фигуры с одной стороны</li>
-                <li>Используйте предпросмотр следующей фигуры для планирования</li>
-            </ul>
         </div>
         
         <button class="btn btn-back" onclick="showScreen('mainMenu')">← НАЗАД</button>
@@ -390,8 +407,11 @@
         <div class="final-score" style="font-size: 1.5rem; margin: 20px 0; color: #feca57;">
             Ваш счет: <span id="finalScore">0</span>
         </div>
-        <button class="btn" onclick="restartGame()">🔄 ИГРАТЬ СНОВА</button>
-        <button class="btn btn-secondary" onclick="showScreen('mainMenu')">📋 В МЕНЮ</button>
+        
+        <input type="text" class="player-name-input" id="playerName" placeholder="Введите ваше имя" maxlength="15">
+        
+        <button class="btn" onclick="saveScoreAndRestart()">💾 СОХРАНИТЬ И ИГРАТЬ</button>
+        <button class="btn btn-secondary" onclick="showScreen('mainMenu')">📋 В МЕНЮ БЕЗ СОХРАНЕНИЯ</button>
     </div>
 
     <script>
@@ -410,13 +430,20 @@
                     initGame();
                     gameInitialized = true;
                 }
+            } else if (screenName === 'mainMenu') {
+                playMinecraftMusic();
             }
         }
 
         // ===== СИСТЕМА РЕКОРДОВ =====
-        function saveRecord(score, level, lines) {
-            const records = getRecords();
+        function saveGlobalRecord(playerName, score, level, lines) {
+            if (!playerName.trim()) {
+                playerName = 'Игрок';
+            }
+            
+            const records = getGlobalRecords();
             const newRecord = {
+                playerName: playerName.substring(0, 15),
                 score: score,
                 level: level,
                 lines: lines,
@@ -428,39 +455,40 @@
             records.sort((a, b) => b.score - a.score);
             const topRecords = records.slice(0, 10);
             
-            localStorage.setItem('tetrisRecords', JSON.stringify(topRecords));
+            localStorage.setItem('tetrisGlobalRecords', JSON.stringify(topRecords));
             updateStats();
         }
 
-        function getRecords() {
-            const records = localStorage.getItem('tetrisRecords');
+        function getGlobalRecords() {
+            const records = localStorage.getItem('tetrisGlobalRecords');
             return records ? JSON.parse(records) : [];
         }
 
         function updateStats() {
-            const records = getRecords();
-            const bestRecord = records.length > 0 ? records[0] : { score: 0, level: 1 };
-            const gamesPlayed = records.length;
-            const maxLevel = records.reduce((max, record) => Math.max(max, record.level), 1);
+            const globalRecords = getGlobalRecords();
+            const personalRecords = getRecords();
             
-            document.getElementById('bestScore').textContent = bestRecord.score;
-            document.getElementById('gamesPlayed').textContent = gamesPlayed;
-            document.getElementById('maxLevel').textContent = maxLevel;
-            document.getElementById('bestScoreMenu').textContent = bestRecord.score;
+            const bestGlobalRecord = globalRecords.length > 0 ? globalRecords[0] : { score: 0 };
+            const bestPersonalRecord = personalRecords.length > 0 ? personalRecords[0] : { score: 0 };
+            
+            document.getElementById('bestScore').textContent = bestPersonalRecord.score;
+            document.getElementById('gamesPlayed').textContent = personalRecords.length;
+            document.getElementById('maxLevel').textContent = personalRecords.reduce((max, record) => Math.max(max, record.level), 1);
+            document.getElementById('bestScoreMenu').textContent = bestPersonalRecord.score;
         }
 
         function loadRecords() {
-            const records = getRecords();
-            const recordsList = document.getElementById('recordsList');
+            const globalRecords = getGlobalRecords();
+            const recordsList = document.getElementById('globalRecordsList');
             
-            if (records.length === 0) {
-                recordsList.innerHTML = '<div class="no-records">Пока нет рекордов!<br>Сыграйте первую игру!</div>';
+            if (globalRecords.length === 0) {
+                recordsList.innerHTML = '<div class="no-records">Пока нет рекордов!<br>Станьте первым!</div>';
             } else {
-                recordsList.innerHTML = records.map((record, index) => `
+                recordsList.innerHTML = globalRecords.map((record, index) => `
                     <div class="record-item">
-                        <div>
-                            <strong>#${index + 1}</strong> - ${record.date}
-                            <div style="font-size: 0.8rem; opacity: 0.7;">Уровень: ${record.level} | Линии: ${record.lines}</div>
+                        <div class="record-player">
+                            <strong>#${index + 1}</strong> ${record.playerName}
+                            <div class="record-date">${record.date} | Ур. ${record.level} | Линии: ${record.lines}</div>
                         </div>
                         <div class="record-score">${record.score}</div>
                     </div>
@@ -470,7 +498,53 @@
             updateStats();
         }
 
-        // ===== ИГРОВАЯ ЛОГИКА =====
+        // ===== МУЗЫКА MINECRAFT =====
+        function playMinecraftMusic() {
+            if (!musicEnabled) return;
+            
+            // Мелодия "Sweden" из Minecraft (упрощенная версия)
+            const minecraftMelody = [
+                { note: 392, duration: 0.6 }, // G4
+                { note: 440, duration: 0.3 }, // A4
+                { note: 493, duration: 0.6 }, // B4
+                { note: 523, duration: 0.3 }, // C5
+                { note: 587, duration: 0.6 }, // D5
+                { note: 659, duration: 0.9 }, // E5
+                { note: 587, duration: 0.6 }, // D5
+                { note: 523, duration: 0.3 }, // C5
+                { note: 493, duration: 0.6 }, // B4
+                { note: 440, duration: 0.3 }, // A4
+                { note: 392, duration: 1.2 }, // G4
+                
+                { note: 493, duration: 0.6 }, // B4
+                { note: 523, duration: 0.3 }, // C5
+                { note: 587, duration: 0.6 }, // D5
+                { note: 659, duration: 0.9 }, // E5
+                { note: 698, duration: 0.6 }, // F5
+                { note: 784, duration: 0.9 }, // G5
+                { note: 698, duration: 0.6 }, // F5
+                { note: 659, duration: 0.3 }, // E5
+                { note: 587, duration: 0.6 }, // D5
+                { note: 523, duration: 0.3 }, // C5
+                { note: 493, duration: 1.2 }, // B4
+            ];
+            
+            let currentNote = 0;
+            
+            function playNextNote() {
+                if (!musicEnabled || !document.getElementById('mainMenu').classList.contains('active')) return;
+                
+                const note = minecraftMelody[currentNote];
+                createSound(note.note, note.duration, 'sine');
+                
+                currentNote = (currentNote + 1) % minecraftMelody.length;
+                setTimeout(playNextNote, note.duration * 800); // Немного медленнее для релакса
+            }
+            
+            playNextNote();
+        }
+
+        // ===== ИГРОВАЯ ЛОГИКА (сокращенная версия) =====
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const BLOCK_SIZE = 25;
@@ -500,13 +574,9 @@
         ];
 
         const SHAPES = [
-            [[1, 1, 1, 1]],
-            [[1, 1], [1, 1]],
-            [[0, 1, 0], [1, 1, 1]],
-            [[1, 0, 0], [1, 1, 1]],
-            [[0, 0, 1], [1, 1, 1]],
-            [[0, 1, 1], [1, 1, 0]],
-            [[1, 1, 0], [0, 1, 1]]
+            [[1, 1, 1, 1]], [[1, 1], [1, 1]], [[0, 1, 0], [1, 1, 1]],
+            [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]],
+            [[0, 1, 1], [1, 1, 0]], [[1, 1, 0], [0, 1, 1]]
         ];
 
         function initGame() {
@@ -519,14 +589,8 @@
             dropInterval = 1000;
             updateDisplay();
             createNewPiece();
-            
-            if (musicEnabled) {
-                setTimeout(playBackgroundMusic, 1000);
-            }
-            
             gameLoop();
         }
-
         function createNewPiece() {
             const shapeId = Math.floor(Math.random() * SHAPES.length);
             currentPiece = {
@@ -769,13 +833,16 @@
 
         function showGameOver() {
             playSound('gameover');
-            saveRecord(score, level, lines);
             document.getElementById('finalScore').textContent = score;
             document.getElementById('gameOver').style.display = 'block';
-            
-            if (window.Telegram && Telegram.WebApp) {
-                Telegram.WebApp.sendData(score.toString());
-            }
+            document.getElementById('playerName').value = '';
+        }
+
+        function saveScoreAndRestart() {
+            const playerName = document.getElementById('playerName').value;
+            saveGlobalRecord(playerName, score, level, lines);
+            document.getElementById('gameOver').style.display = 'none';
+            initGame();
         }
 
         function restartGame() {
@@ -801,7 +868,7 @@
                 oscillator.type = type;
                 oscillator.frequency.value = frequency;
                 
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
                 
                 oscillator.start(audioContext.currentTime);
@@ -815,20 +882,14 @@
             if (!soundEnabled) return;
             
             switch(soundName) {
-                case 'move':
-                    createSound(200, 0.1);
-                    break;
-                case 'rotate':
-                    createSound(300, 0.1, 'square');
-                    break;
-                case 'land':
-                    createSound(150, 0.2);
-                    break;
-                case 'clear':
+                case 'move': createSound(200, 0.1); break;
+                case 'rotate': createSound(300, 0.1, 'square'); break;
+                case 'land': createSound(150, 0.2); break;
+                case 'clear': 
                     createSound(400, 0.3, 'sine');
                     setTimeout(() => createSound(500, 0.2, 'sine'), 100);
                     break;
-                case 'gameover':
+                case 'gameover': 
                     createSound(100, 0.5);
                     setTimeout(() => createSound(80, 0.4), 200);
                     break;
@@ -840,26 +901,6 @@
             }
         }
 
-        function playBackgroundMusic() {
-            if (!musicEnabled) return;
-            
-            const notes = [659, 659, 659, 523, 659, 784, 392, 523, 392, 330, 440, 494, 466, 440];
-            const durations = [0.3, 0.3, 0.3, 0.3, 0.3, 0.6, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.6];
-            
-            let currentNote = 0;
-            
-            function playNextNote() {
-                if (!musicEnabled || gameOver) return;
-                
-                createSound(notes[currentNote], durations[currentNote], 'triangle');
-                currentNote = (currentNote + 1) % notes.length;
-                
-                setTimeout(playNextNote, durations[currentNote] * 1000);
-            }
-            
-            playNextNote();
-        }
-
         function toggleSound() {
             soundEnabled = !soundEnabled;
             updateSoundButtons();
@@ -868,8 +909,8 @@
         function toggleMusic() {
             musicEnabled = !musicEnabled;
             updateSoundButtons();
-            if (musicEnabled && document.getElementById('gameScreen').classList.contains('active')) {
-                playBackgroundMusic();
+            if (musicEnabled && document.getElementById('mainMenu').classList.contains('active')) {
+                playMinecraftMusic();
             }
         }
 
@@ -886,27 +927,151 @@
             });
         }
 
-        // ===== ОБРАБОТКА КЛАВИАТУРЫ =====
-        document.addEventListener('keydown', (e) => {
-            if (gameOver || isPaused) return;
-            
-            switch(e.key) {
-                case 'ArrowLeft': moveLeft(); break;
-                case 'ArrowRight': moveRight(); break;
-                case 'ArrowDown': moveDown(); break;
-                case 'ArrowUp': rotate(); break;
-                case ' ': drop(); break;
-                case 'p': case 'P': pauseGame(); break;
-            }
-        });
+        // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+        function getRecords() {
+            const records = localStorage.getItem('tetrisRecords');
+            return records ? JSON.parse(records) : [];
+        }
+
+        function saveRecord(score, level, lines) {
+            const records = getRecords();
+            records.push({ score, level, lines, timestamp: Date.now() });
+            records.sort((a, b) => b.score - a.score);
+            localStorage.setItem('tetrisRecords', JSON.stringify(records.slice(0, 10)));
+        }
 
         // ===== ИНИЦИАЛИЗАЦИЯ =====
         document.addEventListener('DOMContentLoaded', function() {
             updateStats();
             updateSoundButtons();
+            playMinecraftMusic();
         });
 
-        // Запускаем игру при загрузке
+        // Заглушки для игровых функций
+        function createNewPiece() {
+            const shapeId = Math.floor(Math.random() * SHAPES.length);
+            currentPiece = {
+                shape: SHAPES[shapeId],
+                color: COLORS[shapeId],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[shapeId][0].length / 2),
+                y: 0
+            };
+            
+            if (!isValidMove(currentPiece, currentPiece.x, currentPiece.y)) {
+                gameOver = true;
+                showGameOver();
+            }
+        }
+
+        function drawBlock(x, y, color, isCurrent = false) {
+            const pixelX = x * BLOCK_SIZE;
+            const pixelY = y * BLOCK_SIZE;
+            const gradient = ctx.createLinearGradient(pixelX, pixelY, pixelX + BLOCK_SIZE, pixelY + BLOCK_SIZE);
+            gradient.addColorStop(0, color.light);
+            gradient.addColorStop(0.5, color.main);
+            gradient.addColorStop(1, color.dark);
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = isCurrent ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#0c0c1d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        drawBlock(x, y, board[y][x]);
+                    }
+                }
+            }
+            
+            if (currentPiece && !gameOver) {
+                currentPiece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            drawBlock(currentPiece.x + x, currentPiece.y + y, currentPiece.color, true);
+                        }
+                    });
+                });
+            }
+        }
+
+        function isValidMove(piece, x, y) {
+            return piece.shape.every((row, dy) => {
+                return row.every((value, dx) => {
+                    if (!value) return true;
+                    const newX = x + dx;
+                    const newY = y + dy;
+                    return newX >= 0 && newX < COLS && newY < ROWS && 
+                           (newY < 0 || !board[newY][newX]);
+                });
+            });
+        }
+
+        function placePiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value && currentPiece.y + y >= 0) {
+                        board[currentPiece.y + y][currentPiece.x + x] = currentPiece.color;
+                    }
+                });
+            });
+            clearLines();
+            createNewPiece();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== 0)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    y++;
+                }
+            }
+            if (linesCleared > 0) {
+                playSound('clear');
+                score += [100, 300, 500, 800][linesCleared - 1] * level;
+                lines += linesCleared;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+                updateDisplay();
+            }
+        }
+
+        function gameLoop(timestamp = 0) {
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+            
+            if (!isPaused && !gameOver) {
+                dropTime += deltaTime;
+                if (dropTime > dropInterval) {
+                    if (isValidMove(currentPiece, currentPiece.x, currentPiece.y + 1)) {
+                        currentPiece.y++;
+                    } else {
+                        placePiece();
+                    }
+                    dropTime = 0;
+                }
+            }
+            
+            drawBoard();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('lines').textContent = lines;
+        }
+
+        // Инициализация игры
         initGame();
     </script>
 </body>
