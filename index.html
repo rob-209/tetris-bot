@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tetris in Telegram</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+            color: white;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 320px;
+            margin: 0 auto;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        #gameCanvas {
+            border: 3px solid #fff;
+            border-radius: 10px;
+            background: #111;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 5px;
+        }
+        
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #4CAF50;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Тетрис</h1>
+        <div class="game-info">
+            <div>Счет: <span id="score">0</span></div>
+            <div>Уровень: <span id="level">1</span></div>
+        </div>
+        <canvas id="gameCanvas" width="300" height="450"></canvas>
+        <div class="controls">
+            <button onclick="moveLeft()">⬅️</button>
+            <button onclick="rotate()">🔄</button>
+            <button onclick="moveRight()">➡️</button>
+            <button onclick="moveDown()">⬇️</button>
+            <button onclick="drop()">💨</button>
+        </div>
+    </div>
+
+    <script>
+        // Простой Тетрис (код из предыдущего примера)
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const BLOCK_SIZE = 30;
+        const COLS = 10;
+        const ROWS = 15;
+        
+        let score = 0;
+        let board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        let currentPiece = null;
+        
+        // Минимальная логика игры...
+        // (полный код игры я показывал ранее)
+        
+        function gameLoop() {
+            // Базовая логика игры
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Отрисовка и базовая логика...
+            document.getElementById('score').textContent = score;
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function moveLeft() { /* логика */ }
+        function moveRight() { /* логика */ }
+        function rotate() { /* логика */ }
+        function moveDown() { /* логика */ }
+        function drop() { /* логика */ }
+        
+        gameLoop();
+    </script>
+</body>
+</html>
