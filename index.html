@@ -170,6 +170,28 @@
             grid-column: span 2;
         }
         
+        .music-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .music-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
         .game-over, .rules-screen, .records-screen {
             display: none;
             position: absolute;
@@ -233,6 +255,11 @@
 <body>
     <!-- Главное меню -->
     <div class="screen menu-container active" id="mainMenu">
+        <div class="music-controls">
+            <button class="music-btn" id="soundBtn" onclick="toggleSound()">🔊</button>
+            <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</button>
+        </div>
+        
         <div class="game-title">🎮 ТЕТРИС</div>
         <p style="margin-bottom: 30px; opacity: 0.8;">Классическая игра в Telegram!</p>
         
@@ -249,6 +276,11 @@
 
     <!-- Игровой экран -->
     <div class="screen game-container" id="gameScreen">
+        <div class="music-controls">
+            <button class="music-btn" id="soundBtnGame" onclick="toggleSound()">🔊</button>
+            <button class="music-btn" id="musicBtnGame" onclick="toggleMusic()">🎵</button>
+        </div>
+        
         <div class="game-header">
             <div class="game-title">🎮 ТЕТРИС</div>
         </div>
@@ -365,15 +397,12 @@
     <script>
         // ===== СИСТЕМА ЭКРАНОВ =====
         function showScreen(screenName) {
-            // Скрываем все экраны
             document.querySelectorAll('.screen').forEach(screen => {
                 screen.classList.remove('active');
             });
             
-            // Показываем нужный экран
             document.getElementById(screenName + 'Screen').classList.add('active');
             
-            // Особые действия для экранов
             if (screenName === 'records') {
                 loadRecords();
             } else if (screenName === 'game') {
@@ -396,7 +425,6 @@
             };
             
             records.push(newRecord);
-            // Сортируем по убыванию счета и оставляем топ-10
             records.sort((a, b) => b.score - a.score);
             const topRecords = records.slice(0, 10);
             
@@ -442,7 +470,7 @@
             updateStats();
         }
 
-        // ===== ИГРОВАЯ ЛОГИКА (адаптированная) =====
+        // ===== ИГРОВАЯ ЛОГИКА =====
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const BLOCK_SIZE = 25;
@@ -491,6 +519,11 @@
             dropInterval = 1000;
             updateDisplay();
             createNewPiece();
+            
+            if (musicEnabled) {
+                setTimeout(playBackgroundMusic, 1000);
+            }
+            
             gameLoop();
         }
 
@@ -509,11 +542,233 @@
             }
         }
 
-        // ... (остальные игровые функции из предыдущего кода остаются такими же)
-        // drawBlock, drawBoard, isValidMove, placePiece, clearLines, animateLineClear,
-        // moveLeft, moveRight, moveDown, rotate, drop, pauseGame, gameLoop, updateDisplay
+        function drawBlock(x, y, color, isCurrent = false) {
+            const pixelX = x * BLOCK_SIZE;
+            const pixelY = y * BLOCK_SIZE;
+            const gradient = ctx.createLinearGradient(pixelX, pixelY, pixelX + BLOCK_SIZE, pixelY + BLOCK_SIZE);
+            gradient.addColorStop(0, color.light);
+            gradient.addColorStop(0.5, color.main);
+            gradient.addColorStop(1, color.dark);
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = isCurrent ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
+            
+            if (isCurrent) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(pixelX + 2, pixelY + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+            }
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#0c0c1d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        drawBlock(x, y, board[y][x]);
+                    }
+                }
+            }
+            
+            if (currentPiece && !gameOver) {
+                currentPiece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            drawBlock(currentPiece.x + x, currentPiece.y + y, currentPiece.color, true);
+                        }
+                    });
+                });
+            }
+        }
+
+        function isValidMove(piece, x, y) {
+            return piece.shape.every((row, dy) => {
+                return row.every((value, dx) => {
+                    if (!value) return true;
+                    const newX = x + dx;
+                    const newY = y + dy;
+                    return newX >= 0 && newX < COLS && newY < ROWS && 
+                           (newY < 0 || !board[newY][newX]);
+                });
+            });
+        }
+
+        function placePiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value && currentPiece.y + y >= 0) {
+                        board[currentPiece.y + y][currentPiece.x + x] = currentPiece.color;
+                    }
+                });
+            });
+            
+            clearLines();
+            createNewPiece();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== 0)) {
+                    animateLineClear(y);
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    y++;
+                }
+            }
+            
+            if (linesCleared > 0) {
+                playSound('clear');
+                
+                const linePoints = [100, 300, 500, 800];
+                score += linePoints[linesCleared - 1] * level;
+                lines += linesCleared;
+                
+                const newLevel = Math.floor(lines / 10) + 1;
+                if (newLevel > level) {
+                    level = newLevel;
+                    dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+                    playSound('levelup');
+                }
+                
+                updateDisplay();
+            }
+        }
+
+        function animateLineClear(y) {
+            const originalLine = [...board[y]];
+            let blinkCount = 0;
+            const blinkInterval = setInterval(() => {
+                if (blinkCount % 2 === 0) {
+                    board[y] = Array(COLS).fill({ main: '#FFFFFF', light: '#FFFFFF', dark: '#FFFFFF' });
+                } else {
+                    board[y] = originalLine;
+                }
+                blinkCount++;
+                if (blinkCount > 5) {
+                    clearInterval(blinkInterval);
+                }
+            }, 100);
+        }
+
+        // ===== УПРАВЛЕНИЕ =====
+        function moveLeft() {
+            if (!gameOver && !isPaused && isValidMove(currentPiece, currentPiece.x - 1, currentPiece.y)) {
+                currentPiece.x--;
+                playSound('move');
+            }
+        }
+
+        function moveRight() {
+            if (!gameOver && !isPaused && isValidMove(currentPiece, currentPiece.x + 1, currentPiece.y)) {
+                currentPiece.x++;
+                playSound('move');
+            }
+        }
+
+        function moveDown() {
+            if (!gameOver && !isPaused && isValidMove(currentPiece, currentPiece.x, currentPiece.y + 1)) {
+                currentPiece.y++;
+                score += 1;
+                playSound('move');
+                updateDisplay();
+            }
+        }
+
+        function rotate() {
+            if (gameOver || isPaused) return;
+            
+            const rotated = currentPiece.shape[0].map((_, i) =>
+                currentPiece.shape.map(row => row[i]).reverse()
+            );
+            
+            const oldShape = currentPiece.shape;
+            currentPiece.shape = rotated;
+            
+            if (!isValidMove(currentPiece, currentPiece.x, currentPiece.y)) {
+                if (isValidMove(currentPiece, currentPiece.x - 1, currentPiece.y)) {
+                    currentPiece.x--;
+                } else if (isValidMove(currentPiece, currentPiece.x + 1, currentPiece.y)) {
+                    currentPiece.x++;
+                } else {
+                    currentPiece.shape = oldShape;
+                    return;
+                }
+            }
+            
+            playSound('rotate');
+        }
+
+        function drop() {
+            if (gameOver || isPaused) return;
+            
+            while (isValidMove(currentPiece, currentPiece.x, currentPiece.y + 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            playSound('land');
+            placePiece();
+            updateDisplay();
+        }
+
+        function pauseGame() {
+            isPaused = !isPaused;
+        }
+
+        // ===== ИГРОВОЙ ЦИКЛ =====
+        function gameLoop(timestamp = 0) {
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+            
+            if (!isPaused && !gameOver) {
+                dropTime += deltaTime;
+                if (dropTime > dropInterval) {
+                    if (isValidMove(currentPiece, currentPiece.x, currentPiece.y + 1)) {
+                        currentPiece.y++;
+                        playSound('move');
+                    } else {
+                        playSound('land');
+                        placePiece();
+                    }
+                    dropTime = 0;
+                }
+            }
+            
+            drawBoard();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ===== ИНТЕРФЕЙС =====
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('lines').textContent = lines;
+        }
 
         function showGameOver() {
+            playSound('gameover');
             saveRecord(score, level, lines);
             document.getElementById('finalScore').textContent = score;
             document.getElementById('gameOver').style.display = 'block';
@@ -528,36 +783,131 @@
             initGame();
         }
 
+        // ===== СИСТЕМА ЗВУКОВ =====
+        let soundEnabled = true;
+        let musicEnabled = true;
+
+        function createSound(frequency, duration, type = 'sine') {
+            if (!soundEnabled) return;
+            
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = type;
+                oscillator.frequency.value = frequency;
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch (e) {
+                console.log('Audio not supported');
+            }
+        }
+
+        function playSound(soundName) {
+            if (!soundEnabled) return;
+            
+            switch(soundName) {
+                case 'move':
+                    createSound(200, 0.1);
+                    break;
+                case 'rotate':
+                    createSound(300, 0.1, 'square');
+                    break;
+                case 'land':
+                    createSound(150, 0.2);
+                    break;
+                case 'clear':
+                    createSound(400, 0.3, 'sine');
+                    setTimeout(() => createSound(500, 0.2, 'sine'), 100);
+                    break;
+                case 'gameover':
+                    createSound(100, 0.5);
+                    setTimeout(() => createSound(80, 0.4), 200);
+                    break;
+                case 'levelup':
+                    createSound(600, 0.1, 'sine');
+                    setTimeout(() => createSound(700, 0.1, 'sine'), 100);
+                    setTimeout(() => createSound(800, 0.2, 'sine'), 200);
+                    break;
+            }
+        }
+
+        function playBackgroundMusic() {
+            if (!musicEnabled) return;
+            
+            const notes = [659, 659, 659, 523, 659, 784, 392, 523, 392, 330, 440, 494, 466, 440];
+            const durations = [0.3, 0.3, 0.3, 0.3, 0.3, 0.6, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.6];
+            
+            let currentNote = 0;
+            
+            function playNextNote() {
+                if (!musicEnabled || gameOver) return;
+                
+                createSound(notes[currentNote], durations[currentNote], 'triangle');
+                currentNote = (currentNote + 1) % notes.length;
+                
+                setTimeout(playNextNote, durations[currentNote] * 1000);
+            }
+            
+            playNextNote();
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            updateSoundButtons();
+        }
+
+        function toggleMusic() {
+            musicEnabled = !musicEnabled;
+            updateSoundButtons();
+            if (musicEnabled && document.getElementById('gameScreen').classList.contains('active')) {
+                playBackgroundMusic();
+            }
+        }
+
+        function updateSoundButtons() {
+            const soundBtns = document.querySelectorAll('#soundBtn, #soundBtnGame');
+            const musicBtns = document.querySelectorAll('#musicBtn, #musicBtnGame');
+            
+            soundBtns.forEach(btn => {
+                btn.textContent = soundEnabled ? '🔊' : '🔇';
+            });
+            
+            musicBtns.forEach(btn => {
+                btn.textContent = musicEnabled ? '🎵' : '🎵❌';
+            });
+        }
+
+        // ===== ОБРАБОТКА КЛАВИАТУРЫ =====
+        document.addEventListener('keydown', (e) => {
+            if (gameOver || isPaused) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft': moveLeft(); break;
+                case 'ArrowRight': moveRight(); break;
+                case 'ArrowDown': moveDown(); break;
+                case 'ArrowUp': rotate(); break;
+                case ' ': drop(); break;
+                case 'p': case 'P': pauseGame(); break;
+            }
+        });
+
         // ===== ИНИЦИАЛИЗАЦИЯ =====
         document.addEventListener('DOMContentLoaded', function() {
             updateStats();
-            // Инициализируем базовые игровые функции
-            initGameFunctions();
+            updateSoundButtons();
         });
 
-        function initGameFunctions() {
-            // Здесь будут все игровые функции из предыдущего кода
-            // Для краткости оставим заглушки - вы можете скопировать полную игровую логику
-        }
-
-        // Заглушки для игровых функций (замените на полный код из предыдущего примера)
-        function drawBlock(x, y, color, isCurrent = false) {
-            const pixelX = x * BLOCK_SIZE;
-            const pixelY = y * BLOCK_SIZE;
-            const gradient = ctx.createLinearGradient(pixelX, pixelY, pixelX + BLOCK_SIZE, pixelY + BLOCK_SIZE);
-            gradient.addColorStop(0, color.light);
-            gradient.addColorStop(0.5, color.main);
-            gradient.addColorStop(1, color.dark);
-            
-            ctx.fillStyle = gradient;
-            ctx.fillRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
-            ctx.strokeStyle = isCurrent ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
-        }
-
-        // ... остальные функции игры
-
+        // Запускаем игру при загрузке
+        initGame();
     </script>
 </body>
 </html>
