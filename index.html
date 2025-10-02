@@ -9,6 +9,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            touch-action: manipulation;
         }
         
         body {
@@ -19,7 +20,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 10px;
         }
         
         .screen {
@@ -35,9 +36,9 @@
         .pieces-container {
             display: flex;
             justify-content: space-between;
-            gap: 20px;
+            gap: 15px;
             background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
+            padding: 12px;
             border-radius: 10px;
         }
         
@@ -47,8 +48,8 @@
         }
         
         .piece-label {
-            font-size: 0.9rem;
-            margin-bottom: 8px;
+            font-size: 0.8rem;
+            margin-bottom: 6px;
             opacity: 0.8;
         }
         
@@ -63,7 +64,7 @@
         .game-container {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 20px;
-            padding: 20px;
+            padding: 15px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -72,7 +73,7 @@
         .menu-container {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 20px;
-            padding: 30px;
+            padding: 25px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -81,45 +82,45 @@
         
         .game-header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .game-title {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: bold;
             background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
             color: transparent;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
         .score-container {
             text-align: center;
             background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
+            padding: 12px;
             border-radius: 15px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         
         .score-value {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: bold;
             color: #feca57;
         }
         
         .score-label {
-            font-size: 1rem;
+            font-size: 0.9rem;
             opacity: 0.8;
         }
         
         .game-area {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            margin-bottom: 15px;
+            gap: 12px;
+            margin-bottom: 12px;
         }
         
         #gameCanvas {
@@ -129,7 +130,8 @@
             display: block;
             margin: 0 auto;
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
-            cursor: pointer;
+            touch-action: none;
+            max-width: 100%;
         }
         
         .btn {
@@ -137,15 +139,16 @@
             border: none;
             border-radius: 12px;
             color: white;
-            padding: 15px 20px;
-            font-size: 1.1rem;
+            padding: 14px 18px;
+            font-size: 1rem;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             width: 100%;
-            margin: 10px 0;
+            margin: 8px 0;
             display: block;
             text-decoration: none;
+            touch-action: manipulation;
         }
         
         .btn:hover {
@@ -159,27 +162,38 @@
         
         .btn-back {
             background: rgba(255, 255, 255, 0.2);
-            margin-top: 20px;
+            margin-top: 15px;
         }
         
         .hint {
             background: rgba(254, 202, 87, 0.2);
             border: 1px solid #feca57;
             border-radius: 8px;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 0.9rem;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        
+        .mobile-hint {
+            display: none;
+            background: rgba(72, 219, 251, 0.2);
+            border: 1px solid #48dbfb;
+            border-radius: 8px;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 0.8rem;
             text-align: center;
         }
         
         .game-over {
             display: none;
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.95);
-            padding: 30px;
+            padding: 25px;
             border-radius: 20px;
             text-align: center;
             border: 2px solid #667eea;
@@ -189,9 +203,54 @@
         }
         
         .final-score {
-            font-size: 1.5rem;
-            margin: 20px 0;
+            font-size: 1.3rem;
+            margin: 15px 0;
             color: #feca57;
+        }
+
+        /* Адаптация для мобильных устройств */
+        @media (max-width: 480px) {
+            .game-title {
+                font-size: 1.8rem;
+            }
+            
+            .score-value {
+                font-size: 1.5rem;
+            }
+            
+            .pieces-container {
+                gap: 10px;
+                padding: 10px;
+            }
+            
+            .piece-label {
+                font-size: 0.7rem;
+            }
+            
+            #currentPieceCanvas, #nextPieceCanvas {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .mobile-hint {
+                display: block;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .game-title {
+                font-size: 1.6rem;
+            }
+            
+            #gameCanvas {
+                width: 280px;
+                height: 370px;
+            }
+            
+            #currentPieceCanvas, #nextPieceCanvas {
+                width: 60px;
+                height: 60px;
+            }
         }
     </style>
 </head>
@@ -199,12 +258,12 @@
     <!-- Главное меню -->
     <div class="screen menu-container active" id="mainMenu">
         <div class="game-title">🧩 BLOCK PUZZLE</div>
-        <p style="margin-bottom: 30px; opacity: 0.8;">Заполняйте поле фигурами!</p>
+        <p style="margin-bottom: 25px; opacity: 0.8;">Заполняйте поле фигурами!</p>
         
         <button class="btn" onclick="showScreen('game')">🎮 НАЧАТЬ ИГРУ</button>
         
-        <div style="margin-top: 30px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;">
-            <div style="font-size: 0.9rem; opacity: 0.8;">
+        <div style="margin-top: 25px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 10px;">
+            <div style="font-size: 0.8rem; opacity: 0.8;">
                 🎯 Лучший счет: <span id="bestScoreMenu">0</span>
             </div>
         </div>
@@ -223,6 +282,10 @@
         
         <div class="hint">
             💡 Наводите курсор на поле, чтобы увидеть фигуру. Кликните, чтобы поставить.
+        </div>
+        
+        <div class="mobile-hint">
+            📱 Касайтесь поля, чтобы увидеть фигуру. Нажмите, чтобы поставить.
         </div>
         
         <div class="game-area">
@@ -290,6 +353,7 @@
         let gameOver = false;
         let gameInitialized = false;
         let hoverPosition = { x: -1, y: -1 };
+        let isTouchDevice = false;
 
         const COLORS = [
             { main: '#00FFFF', light: '#80FFFF', dark: '#008080' },
@@ -316,7 +380,14 @@
             [[1],[1]]			 // I2 vertical
         ];
 
+        // Определяем тип устройства
+        function detectTouchDevice() {
+            return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        }
+
         function initGame() {
+            isTouchDevice = detectTouchDevice();
+            
             // Создаем поле с случайными блоками
             board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
             
@@ -402,8 +473,8 @@
             };
             
             generateNextPiece();
-            drawCurrentPiece(); // ← Отрисовываем текущую фигуру
-            drawNextPiece();    // ← Отрисовываем следующую фигуру
+            drawCurrentPiece();
+            drawNextPiece();
         }
 
         function drawNextPiece() {
@@ -443,10 +514,9 @@
             const pixelY = y * BLOCK_SIZE;
             
             if (isPreview) {
-                ctx.fillStyle = color.main + '80'; // Полупрозрачный
+                ctx.fillStyle = color.main + '80';
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
             } else if (isHover) {
-                // Более яркое отображение для фигуры при наведении
                 const gradient = ctx.createLinearGradient(pixelX, pixelY, pixelX + BLOCK_SIZE, pixelY + BLOCK_SIZE);
                 gradient.addColorStop(0, color.light);
                 gradient.addColorStop(0.5, color.main);
@@ -467,7 +537,6 @@
             ctx.lineWidth = 2;
             ctx.strokeRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
             
-            // Добавляем эффект свечения для фигуры при наведении
             if (isHover) {
                 ctx.shadowColor = color.main;
                 ctx.shadowBlur = 10;
@@ -506,7 +575,7 @@
                 }
             }
             
-            // Рисуем фигуру при наведении
+            // Рисуем фигуру при наведении/касании
             if (hoverPosition.x >= 0 && hoverPosition.y >= 0 && currentPiece) {
                 drawHoverPiece();
             }
@@ -538,12 +607,10 @@
                     const boardX = gridX + x;
                     const boardY = gridY + y;
                     
-                    // Проверка границ
                     if (boardX < 0 || boardX >= COLS || boardY < 0 || boardY >= ROWS) {
                         return false;
                     }
                     
-                    // Проверка на занятость клетки
                     if (board[boardY][boardX] !== 0) {
                         return false;
                     }
@@ -558,7 +625,6 @@
                 return false;
             }
             
-            // Размещаем фигуру на поле
             currentPiece.shape.forEach((row, y) => {
                 row.forEach((value, x) => {
                     if (value) {
@@ -569,19 +635,11 @@
                 });
             });
             
-            // Начисляем очки за размещение
             score += 10;
-            
-            // Проверяем и очищаем линии
             checkLines();
-            
-            // Берем следующую фигуру
             takeNextPiece();
-            
-            // Сбрасываем позицию наведения
             hoverPosition = { x: -1, y: -1 };
             
-            // Проверяем возможность продолжения игры
             if (!canPlaceCurrentPiece()) {
                 gameOver = true;
                 setTimeout(() => showGameOver(), 500);
@@ -607,7 +665,6 @@
             let clearedRows = [];
             let clearedCols = [];
             
-            // Проверяем строки
             for (let y = 0; y < ROWS; y++) {
                 let fullRow = true;
                 for (let x = 0; x < COLS; x++) {
@@ -621,7 +678,6 @@
                 }
             }
             
-            // Проверяем столбцы
             for (let x = 0; x < COLS; x++) {
                 let fullColumn = true;
                 for (let y = 0; y < ROWS; y++) {
@@ -638,32 +694,37 @@
             linesCleared = clearedRows.length + clearedCols.length;
             
             if (linesCleared > 0) {
-                // Очищаем строки
                 clearedRows.forEach(y => {
                     for (let x = 0; x < COLS; x++) {
                         board[y][x] = 0;
                     }
                 });
                 
-                // Очищаем столбцы
                 clearedCols.forEach(x => {
                     for (let y = 0; y < ROWS; y++) {
                         board[y][x] = 0;
                     }
                 });
                 
-                // Начисляем очки за линии
                 const lineBonus = linesCleared * 100;
                 score += lineBonus;
                 
-                // Анимация очистки
                 setTimeout(() => {
                     drawBoard();
                 }, 200);
             }
         }
 
+        function getTouchPos(touchEvent) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: touchEvent.touches[0].clientX - rect.left,
+                y: touchEvent.touches[0].clientY - rect.top
+            };
+        }
+
         function setupEventListeners() {
+            // Клик для десктопа
             canvas.addEventListener('click', (event) => {
                 if (gameOver) return;
                 
@@ -679,8 +740,9 @@
                 }
             });
             
+            // Движение мыши для десктопа
             canvas.addEventListener('mousemove', (event) => {
-                if (gameOver) return;
+                if (gameOver || isTouchDevice) return;
                 
                 const rect = canvas.getBoundingClientRect();
                 const x = event.clientX - rect.left;
@@ -689,14 +751,52 @@
                 const gridX = Math.floor(x / BLOCK_SIZE);
                 const gridY = Math.floor(y / BLOCK_SIZE);
                 
-                // Обновляем позицию наведения
                 hoverPosition = { x: gridX, y: gridY };
-                
-                // Перерисовываем поле с фигурой при наведении
                 drawBoard();
             });
             
             canvas.addEventListener('mouseleave', () => {
+                if (!isTouchDevice) {
+                    hoverPosition = { x: -1, y: -1 };
+                    drawBoard();
+                }
+            });
+            
+            // События касания для мобильных
+            canvas.addEventListener('touchstart', (event) => {
+                if (gameOver) return;
+                event.preventDefault();
+                
+                const touchPos = getTouchPos(event);
+                const gridX = Math.floor(touchPos.x / BLOCK_SIZE);
+                const gridY = Math.floor(touchPos.y / BLOCK_SIZE);
+                
+                hoverPosition = { x: gridX, y: gridY };
+                drawBoard();
+            });
+            
+            canvas.addEventListener('touchmove', (event) => {
+                if (gameOver) return;
+                event.preventDefault();
+                
+                const touchPos = getTouchPos(event);
+                const gridX = Math.floor(touchPos.x / BLOCK_SIZE);
+                const gridY = Math.floor(touchPos.y / BLOCK_SIZE);
+                
+                hoverPosition = { x: gridX, y: gridY };
+                drawBoard();
+            });
+            
+            canvas.addEventListener('touchend', (event) => {
+                if (gameOver) return;
+                event.preventDefault();
+                
+                if (hoverPosition.x >= 0 && hoverPosition.y >= 0) {
+                    if (placePiece(hoverPosition.x, hoverPosition.y)) {
+                        drawBoard();
+                    }
+                }
+                
                 hoverPosition = { x: -1, y: -1 };
                 drawBoard();
             });
