@@ -1,5 +1,4 @@
-
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <title>Block Puzzle Game</title>
@@ -31,6 +30,34 @@
         
         .screen.active {
             display: block;
+        }
+        
+        .pieces-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .piece-group {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .piece-label {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            opacity: 0.8;
+        }
+        
+        #currentPieceCanvas, #nextPieceCanvas {
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            display: block;
+            margin: 0 auto;
         }
         
         .game-container {
@@ -69,13 +96,6 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
-        .menu-title {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #feca57;
-            margin-bottom: 30px;
-        }
-        
         .score-container {
             text-align: center;
             background: rgba(0, 0, 0, 0.3);
@@ -109,27 +129,7 @@
             display: block;
             margin: 0 auto;
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
-        }
-        
-        .next-piece-container {
-            text-align: center;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px;
-            border-radius: 10px;
-        }
-        
-        .next-piece-label {
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-            opacity: 0.8;
-        }
-        
-        #nextPieceCanvas {
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            background: rgba(0, 0, 0, 0.5);
-            display: block;
-            margin: 0 auto;
+            cursor: pointer;
         }
         
         .btn {
@@ -222,15 +222,21 @@
         </div>
         
         <div class="hint">
-            💡 Кликните на поле, чтобы поставить фигуру
+            💡 Наводите курсор на поле, чтобы увидеть фигуру. Кликните, чтобы поставить.
         </div>
         
         <div class="game-area">
             <canvas id="gameCanvas" width="300" height="400"></canvas>
             
-            <div class="next-piece-container">
-                <div class="next-piece-label">СЛЕДУЮЩАЯ ФИГУРА:</div>
-                <canvas id="nextPieceCanvas" width="80" height="80"></canvas>
+            <div class="pieces-container">
+                <div class="piece-group">
+                    <div class="piece-label">ТЕКУЩАЯ ФИГУРА:</div>
+                    <canvas id="currentPieceCanvas" width="80" height="80"></canvas>
+                </div>
+                <div class="piece-group">
+                    <div class="piece-label">СЛЕДУЮЩАЯ ФИГУРА:</div>
+                    <canvas id="nextPieceCanvas" width="80" height="80"></canvas>
+                </div>
             </div>
         </div>
         
@@ -270,6 +276,8 @@
         const ctx = canvas.getContext('2d');
         const nextPieceCanvas = document.getElementById('nextPieceCanvas');
         const nextPieceCtx = nextPieceCanvas.getContext('2d');
+        const currentPieceCanvas = document.getElementById('currentPieceCanvas');
+        const currentPieceCtx = currentPieceCanvas.getContext('2d');
         
         const BLOCK_SIZE = 25;
         const COLS = 10;
@@ -281,6 +289,7 @@
         let score = 0;
         let gameOver = false;
         let gameInitialized = false;
+        let hoverPosition = { x: -1, y: -1 };
 
         const COLORS = [
             { main: '#00FFFF', light: '#80FFFF', dark: '#008080' },
@@ -308,11 +317,15 @@
         ];
 
         function initGame() {
-            // Создаем пустое поле
+            // Создаем поле с случайными блоками
             board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            
+            // Добавляем случайные блоки на поле
+            addRandomBlocks();
             
             score = 0;
             gameOver = false;
+            hoverPosition = { x: -1, y: -1 };
             
             // Генерируем первую фигуру
             generateNextPiece();
@@ -321,6 +334,54 @@
             updateDisplay();
             drawBoard();
             setupEventListeners();
+        }
+
+        function addRandomBlocks() {
+            // Добавляем 10-15 случайных блоков
+            const blockCount = Math.floor(Math.random() * 6) + 10;
+            
+            for (let i = 0; i < blockCount; i++) {
+                const x = Math.floor(Math.random() * COLS);
+                const y = Math.floor(Math.random() * ROWS);
+                const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                
+                if (board[y][x] === 0) {
+                    board[y][x] = color;
+                }
+            }
+        }
+
+        function drawCurrentPiece() {
+            // Очищаем canvas
+            currentPieceCtx.fillStyle = '#0c0c1d';
+            currentPieceCtx.fillRect(0, 0, currentPieceCanvas.width, currentPieceCanvas.height);
+            
+            const blockSize = 15;
+            const offsetX = (currentPieceCanvas.width - currentPiece.shape[0].length * blockSize) / 2;
+            const offsetY = (currentPieceCanvas.height - currentPiece.shape.length * blockSize) / 2;
+            
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const pixelX = offsetX + x * blockSize;
+                        const pixelY = offsetY + y * blockSize;
+                        
+                        const gradient = currentPieceCtx.createLinearGradient(
+                            pixelX, pixelY, pixelX + blockSize, pixelY + blockSize
+                        );
+                        gradient.addColorStop(0, currentPiece.color.light);
+                        gradient.addColorStop(0.5, currentPiece.color.main);
+                        gradient.addColorStop(1, currentPiece.color.dark);
+                        
+                        currentPieceCtx.fillStyle = gradient;
+                        currentPieceCtx.fillRect(pixelX, pixelY, blockSize, blockSize);
+                        
+                        currentPieceCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                        currentPieceCtx.lineWidth = 1;
+                        currentPieceCtx.strokeRect(pixelX, pixelY, blockSize, blockSize);
+                    }
+                });
+            });
         }
 
         function generateNextPiece() {
@@ -335,12 +396,14 @@
 
         function takeNextPiece() {
             currentPiece = {
-                shape: JSON.parse(JSON.stringify(nextPiece.shape)), // глубокое копирование
+                shape: JSON.parse(JSON.stringify(nextPiece.shape)),
                 color: nextPiece.color,
                 rotations: 0
             };
             
             generateNextPiece();
+            drawCurrentPiece(); // ← Отрисовываем текущую фигуру
+            drawNextPiece();    // ← Отрисовываем следующую фигуру
         }
 
         function drawNextPiece() {
@@ -375,13 +438,22 @@
             });
         }
 
-        function drawBlock(x, y, color, isPreview = false) {
+        function drawBlock(x, y, color, isPreview = false, isHover = false) {
             const pixelX = x * BLOCK_SIZE;
             const pixelY = y * BLOCK_SIZE;
             
             if (isPreview) {
                 ctx.fillStyle = color.main + '80'; // Полупрозрачный
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            } else if (isHover) {
+                // Более яркое отображение для фигуры при наведении
+                const gradient = ctx.createLinearGradient(pixelX, pixelY, pixelX + BLOCK_SIZE, pixelY + BLOCK_SIZE);
+                gradient.addColorStop(0, color.light);
+                gradient.addColorStop(0.5, color.main);
+                gradient.addColorStop(1, color.dark);
+                ctx.fillStyle = gradient;
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
             } else {
                 const gradient = ctx.createLinearGradient(pixelX, pixelY, pixelX + BLOCK_SIZE, pixelY + BLOCK_SIZE);
                 gradient.addColorStop(0, color.light);
@@ -394,6 +466,14 @@
             ctx.fillRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
             ctx.lineWidth = 2;
             ctx.strokeRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
+            
+            // Добавляем эффект свечения для фигуры при наведении
+            if (isHover) {
+                ctx.shadowColor = color.main;
+                ctx.shadowBlur = 10;
+                ctx.strokeRect(pixelX, pixelY, BLOCK_SIZE, BLOCK_SIZE);
+                ctx.shadowBlur = 0;
+            }
         }
 
         function drawBoard() {
@@ -425,9 +505,32 @@
                     }
                 }
             }
+            
+            // Рисуем фигуру при наведении
+            if (hoverPosition.x >= 0 && hoverPosition.y >= 0 && currentPiece) {
+                drawHoverPiece();
+            }
+        }
+
+        function drawHoverPiece() {
+            if (!currentPiece || !isValidPlacement(hoverPosition.x, hoverPosition.y)) return;
+            
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardX = hoverPosition.x + x;
+                        const boardY = hoverPosition.y + y;
+                        if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+                            drawBlock(boardX, boardY, currentPiece.color, false, true);
+                        }
+                    }
+                });
+            });
         }
 
         function isValidPlacement(gridX, gridY) {
+            if (!currentPiece) return false;
+            
             return currentPiece.shape.every((row, y) => {
                 return row.every((value, x) => {
                     if (!value) return true;
@@ -474,6 +577,9 @@
             
             // Берем следующую фигуру
             takeNextPiece();
+            
+            // Сбрасываем позицию наведения
+            hoverPosition = { x: -1, y: -1 };
             
             // Проверяем возможность продолжения игры
             if (!canPlaceCurrentPiece()) {
@@ -583,22 +689,16 @@
                 const gridX = Math.floor(x / BLOCK_SIZE);
                 const gridY = Math.floor(y / BLOCK_SIZE);
                 
-                drawBoard();
+                // Обновляем позицию наведения
+                hoverPosition = { x: gridX, y: gridY };
                 
-                // Показываем preview фигуры
-                if (isValidPlacement(gridX, gridY)) {
-                    currentPiece.shape.forEach((row, y) => {
-                        row.forEach((value, x) => {
-                            if (value) {
-                                const boardX = gridX + x;
-                                const boardY = gridY + y;
-                                if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
-                                    drawBlock(boardX, boardY, currentPiece.color, true);
-                                }
-                            }
-                        });
-                    });
-                }
+                // Перерисовываем поле с фигурой при наведении
+                drawBoard();
+            });
+            
+            canvas.addEventListener('mouseleave', () => {
+                hoverPosition = { x: -1, y: -1 };
+                drawBoard();
             });
         }
 
