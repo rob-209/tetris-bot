@@ -285,7 +285,7 @@
         </div>
         
         <div class="mobile-hint">
-            📱 Касайтесь поля, чтобы увидеть фигуру. Нажмите, чтобы поставить.
+            📱 Касайтесь поля, чтобы увидеть фигуру (она покажется выше пальца). Нажмите, чтобы поставить.
         </div>
         
         <div class="game-area">
@@ -354,6 +354,7 @@
         let gameInitialized = false;
         let hoverPosition = { x: -1, y: -1 };
         let isTouchDevice = false;
+        let displayOffset = { x: 0, y: 0 }; // Смещение для отображения фигуры
 
         const COLORS = [
             { main: '#00FFFF', light: '#80FFFF', dark: '#008080' },
@@ -385,6 +386,29 @@
             return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         }
 
+        // Вычисляем смещение для отображения фигуры
+        function calculateDisplayOffset(touchX, touchY) {
+            const rect = canvas.getBoundingClientRect();
+            const canvasCenterX = rect.width / 2;
+            const canvasCenterY = rect.height / 2;
+            
+            // Определяем, в какой части экрана касание
+            const isLeft = touchX < canvasCenterX;
+            const isTop = touchY < canvasCenterY;
+            
+            // Смещаем фигуру в противоположную сторону от касания
+            let offsetX = 0;
+            let offsetY = 0;
+            
+            if (isTouchDevice) {
+                // Для мобильных: смещаем вверх и влево от пальца
+                offsetX = -2; // На 2 блока влево
+                offsetY = -3; // На 3 блока вверх
+            }
+            
+            return { x: offsetX, y: offsetY };
+        }
+
         function initGame() {
             isTouchDevice = detectTouchDevice();
             
@@ -397,6 +421,7 @@
             score = 0;
             gameOver = false;
             hoverPosition = { x: -1, y: -1 };
+            displayOffset = { x: 0, y: 0 };
             
             // Генерируем первую фигуру
             generateNextPiece();
@@ -584,11 +609,15 @@
         function drawHoverPiece() {
             if (!currentPiece || !isValidPlacement(hoverPosition.x, hoverPosition.y)) return;
             
+            // Используем смещенную позицию для отображения
+            const displayX = hoverPosition.x + displayOffset.x;
+            const displayY = hoverPosition.y + displayOffset.y;
+            
             currentPiece.shape.forEach((row, y) => {
                 row.forEach((value, x) => {
                     if (value) {
-                        const boardX = hoverPosition.x + x;
-                        const boardY = hoverPosition.y + y;
+                        const boardX = displayX + x;
+                        const boardY = displayY + y;
                         if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
                             drawBlock(boardX, boardY, currentPiece.color, false, true);
                         }
@@ -639,6 +668,7 @@
             checkLines();
             takeNextPiece();
             hoverPosition = { x: -1, y: -1 };
+            displayOffset = { x: 0, y: 0 };
             
             if (!canPlaceCurrentPiece()) {
                 gameOver = true;
@@ -752,12 +782,14 @@
                 const gridY = Math.floor(y / BLOCK_SIZE);
                 
                 hoverPosition = { x: gridX, y: gridY };
+                displayOffset = { x: 0, y: 0 }; // На десктопе смещение не нужно
                 drawBoard();
             });
             
             canvas.addEventListener('mouseleave', () => {
                 if (!isTouchDevice) {
                     hoverPosition = { x: -1, y: -1 };
+                    displayOffset = { x: 0, y: 0 };
                     drawBoard();
                 }
             });
@@ -772,6 +804,7 @@
                 const gridY = Math.floor(touchPos.y / BLOCK_SIZE);
                 
                 hoverPosition = { x: gridX, y: gridY };
+                displayOffset = calculateDisplayOffset(touchPos.x, touchPos.y);
                 drawBoard();
             });
             
@@ -784,6 +817,7 @@
                 const gridY = Math.floor(touchPos.y / BLOCK_SIZE);
                 
                 hoverPosition = { x: gridX, y: gridY };
+                displayOffset = calculateDisplayOffset(touchPos.x, touchPos.y);
                 drawBoard();
             });
             
@@ -792,12 +826,14 @@
                 event.preventDefault();
                 
                 if (hoverPosition.x >= 0 && hoverPosition.y >= 0) {
+                    // При размещении используем реальную позицию (без смещения)
                     if (placePiece(hoverPosition.x, hoverPosition.y)) {
                         drawBoard();
                     }
                 }
                 
                 hoverPosition = { x: -1, y: -1 };
+                displayOffset = { x: 0, y: 0 };
                 drawBoard();
             });
         }
