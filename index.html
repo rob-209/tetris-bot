@@ -21,6 +21,7 @@
             justify-content: center;
             align-items: center;
             padding: 10px;
+            overflow: hidden;
         }
         
         .screen {
@@ -40,6 +41,7 @@
             background: rgba(0, 0, 0, 0.3);
             padding: 12px;
             border-radius: 10px;
+            margin-bottom: 10px;
         }
         
         .piece-group {
@@ -208,6 +210,59 @@
             color: #feca57;
         }
 
+        .records-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .record-player {
+            flex: 1;
+            text-align: left;
+        }
+
+        .record-score {
+            color: #feca57;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .record-date {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 2px;
+        }
+
+        .player-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            color: white;
+            padding: 10px;
+            font-size: 1rem;
+            width: 100%;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .player-input::placeholder {
+            color: #aaa;
+        }
+
         /* Адаптация для мобильных устройств */
         @media (max-width: 480px) {
             .game-title {
@@ -228,12 +283,16 @@
             }
             
             #currentPieceCanvas, #nextPieceCanvas {
-                width: 70px;
-                height: 70px;
+                width: 70px !important;
+                height: 70px !important;
             }
             
             .mobile-hint {
                 display: block;
+            }
+
+            .records-container {
+                max-height: 200px;
             }
         }
 
@@ -248,9 +307,17 @@
             }
             
             #currentPieceCanvas, #nextPieceCanvas {
-                width: 60px;
-                height: 60px;
+                width: 60px !important;
+                height: 60px !important;
             }
+        }
+
+        /* Убираем выделение при тапе на мобильных */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
     </style>
 </head>
@@ -261,6 +328,7 @@
         <p style="margin-bottom: 25px; opacity: 0.8;">Заполняйте поле фигурами!</p>
         
         <button class="btn" onclick="showScreen('game')">🎮 НАЧАТЬ ИГРУ</button>
+        <button class="btn" onclick="showScreen('records')">🏆 РЕКОРДЫ</button>
         
         <div style="margin-top: 25px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 10px;">
             <div style="font-size: 0.8rem; opacity: 0.8;">
@@ -285,7 +353,7 @@
         </div>
         
         <div class="mobile-hint">
-            📱 Касайтесь поля, чтобы увидеть фигуру (она покажется выше пальца). Нажмите, чтобы поставить.
+            📱 Касайтесь поля, чтобы увидеть фигуру. Отпустите, чтобы поставить.
         </div>
         
         <div class="game-area">
@@ -306,6 +374,17 @@
         <button class="btn btn-back" onclick="showScreen('mainMenu')">← В МЕНЮ</button>
     </div>
 
+    <!-- Экран рекордов -->
+    <div class="screen menu-container" id="recordsScreen">
+        <div class="game-title">🏆 РЕКОРДЫ</div>
+        
+        <div class="records-container" id="recordsList">
+            <!-- Рекорды будут загружены здесь -->
+        </div>
+        
+        <button class="btn btn-back" onclick="showScreen('mainMenu')">← НАЗАД</button>
+    </div>
+
     <!-- Модальное окно окончания игры -->
     <div class="game-over" id="gameOver">
         <h2>🎯 ИГРА ОКОНЧЕНА!</h2>
@@ -313,8 +392,10 @@
             Ваш счет: <span id="finalScore">0</span>
         </div>
         
-        <button class="btn" onclick="restartGame()">🔄 ИГРАТЬ СНОВА</button>
-        <button class="btn btn-back" onclick="showScreen('mainMenu')">📋 В МЕНЮ</button>
+        <input type="text" class="player-input" id="playerName" placeholder="Введите ваше имя" maxlength="15">
+        
+        <button class="btn" onclick="saveRecordAndRestart()">💾 СОХРАНИТЬ РЕКОРД</button>
+        <button class="btn btn-back" onclick="restartGame()">🔄 ИГРАТЬ БЕЗ СОХРАНЕНИЯ</button>
     </div>
 
     <script>
@@ -326,12 +407,67 @@
             
             document.getElementById(screenName + 'Screen').classList.add('active');
             
-            if (screenName === 'game') {
+            if (screenName === 'records') {
+                loadRecords();
+            } else if (screenName === 'game') {
                 if (!gameInitialized) {
                     initGame();
                     gameInitialized = true;
                 }
             }
+        }
+
+        // ===== СИСТЕМА РЕКОРДОВ =====
+        function saveRecord(playerName, score) {
+            if (!playerName.trim()) {
+                playerName = 'Аноним';
+            }
+            
+            const records = getRecords();
+            const newRecord = {
+                playerName: playerName.substring(0, 15),
+                score: score,
+                date: new Date().toLocaleDateString('ru-RU')
+            };
+            
+            records.push(newRecord);
+            // Сортируем по убыванию счета
+            records.sort((a, b) => b.score - a.score);
+            // Оставляем только топ-10
+            const topRecords = records.slice(0, 10);
+            
+            localStorage.setItem('blockPuzzleRecords', JSON.stringify(topRecords));
+            updateBestScore();
+        }
+
+        function getRecords() {
+            const records = localStorage.getItem('blockPuzzleRecords');
+            return records ? JSON.parse(records) : [];
+        }
+
+        function loadRecords() {
+            const records = getRecords();
+            const recordsList = document.getElementById('recordsList');
+            
+            if (records.length === 0) {
+                recordsList.innerHTML = '<div style="text-align: center; padding: 20px; opacity: 0.7;">Пока нет рекордов!<br>Станьте первым!</div>';
+            } else {
+                recordsList.innerHTML = records.map((record, index) => `
+                    <div class="record-item">
+                        <div class="record-player">
+                            <strong>#${index + 1}</strong> ${record.playerName}
+                            <div class="record-date">${record.date}</div>
+                        </div>
+                        <div class="record-score">${record.score}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function updateBestScore() {
+            const records = getRecords();
+            const bestScore = records.length > 0 ? records[0].score : 0;
+            document.getElementById('bestScoreMenu').textContent = bestScore;
         }
 
         // ===== ИГРОВАЯ ЛОГИКА =====
@@ -354,7 +490,6 @@
         let gameInitialized = false;
         let hoverPosition = { x: -1, y: -1 };
         let isTouchDevice = false;
-        let displayOffset = { x: 0, y: 0 }; // Смещение для отображения фигуры
 
         const COLORS = [
             { main: '#00FFFF', light: '#80FFFF', dark: '#008080' },
@@ -386,29 +521,6 @@
             return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         }
 
-        // Вычисляем смещение для отображения фигуры
-        function calculateDisplayOffset(touchX, touchY) {
-            const rect = canvas.getBoundingClientRect();
-            const canvasCenterX = rect.width / 2;
-            const canvasCenterY = rect.height / 2;
-            
-            // Определяем, в какой части экрана касание
-            const isLeft = touchX < canvasCenterX;
-            const isTop = touchY < canvasCenterY;
-            
-            // Смещаем фигуру в противоположную сторону от касания
-            let offsetX = 0;
-            let offsetY = 0;
-            
-            if (isTouchDevice) {
-                // Для мобильных: смещаем вверх и влево от пальца
-                offsetX = -2; // На 2 блока влево
-                offsetY = -3; // На 3 блока вверх
-            }
-            
-            return { x: offsetX, y: offsetY };
-        }
-
         function initGame() {
             isTouchDevice = detectTouchDevice();
             
@@ -421,7 +533,6 @@
             score = 0;
             gameOver = false;
             hoverPosition = { x: -1, y: -1 };
-            displayOffset = { x: 0, y: 0 };
             
             // Генерируем первую фигуру
             generateNextPiece();
@@ -448,7 +559,6 @@
         }
 
         function drawCurrentPiece() {
-            // Очищаем canvas
             currentPieceCtx.fillStyle = '#0c0c1d';
             currentPieceCtx.fillRect(0, 0, currentPieceCanvas.width, currentPieceCanvas.height);
             
@@ -499,7 +609,6 @@
             
             generateNextPiece();
             drawCurrentPiece();
-            drawNextPiece();
         }
 
         function drawNextPiece() {
@@ -609,15 +718,11 @@
         function drawHoverPiece() {
             if (!currentPiece || !isValidPlacement(hoverPosition.x, hoverPosition.y)) return;
             
-            // Используем смещенную позицию для отображения
-            const displayX = hoverPosition.x + displayOffset.x;
-            const displayY = hoverPosition.y + displayOffset.y;
-            
             currentPiece.shape.forEach((row, y) => {
                 row.forEach((value, x) => {
                     if (value) {
-                        const boardX = displayX + x;
-                        const boardY = displayY + y;
+                        const boardX = hoverPosition.x + x;
+                        const boardY = hoverPosition.y + y;
                         if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
                             drawBlock(boardX, boardY, currentPiece.color, false, true);
                         }
@@ -668,7 +773,6 @@
             checkLines();
             takeNextPiece();
             hoverPosition = { x: -1, y: -1 };
-            displayOffset = { x: 0, y: 0 };
             
             if (!canPlaceCurrentPiece()) {
                 gameOver = true;
@@ -747,9 +851,12 @@
 
         function getTouchPos(touchEvent) {
             const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
             return {
-                x: touchEvent.touches[0].clientX - rect.left,
-                y: touchEvent.touches[0].clientY - rect.top
+                x: (touchEvent.touches[0].clientX - rect.left) * scaleX,
+                y: (touchEvent.touches[0].clientY - rect.top) * scaleY
             };
         }
 
@@ -759,8 +866,11 @@
                 if (gameOver) return;
                 
                 const rect = canvas.getBoundingClientRect();
-                const x = event.clientX - rect.left;
-                const y = event.clientY - rect.top;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                const x = (event.clientX - rect.left) * scaleX;
+                const y = (event.clientY - rect.top) * scaleY;
                 
                 const gridX = Math.floor(x / BLOCK_SIZE);
                 const gridY = Math.floor(y / BLOCK_SIZE);
@@ -775,41 +885,44 @@
                 if (gameOver || isTouchDevice) return;
                 
                 const rect = canvas.getBoundingClientRect();
-                const x = event.clientX - rect.left;
-                const y = event.clientY - rect.top;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                const x = (event.clientX - rect.left) * scaleX;
+                const y = (event.clientY - rect.top) * scaleY;
                 
                 const gridX = Math.floor(x / BLOCK_SIZE);
                 const gridY = Math.floor(y / BLOCK_SIZE);
                 
                 hoverPosition = { x: gridX, y: gridY };
-                displayOffset = { x: 0, y: 0 }; // На десктопе смещение не нужно
                 drawBoard();
             });
             
             canvas.addEventListener('mouseleave', () => {
                 if (!isTouchDevice) {
                     hoverPosition = { x: -1, y: -1 };
-                    displayOffset = { x: 0, y: 0 };
                     drawBoard();
                 }
             });
             
             // События касания для мобильных
+            let touchActive = false;
+            
             canvas.addEventListener('touchstart', (event) => {
                 if (gameOver) return;
                 event.preventDefault();
+                touchActive = true;
                 
                 const touchPos = getTouchPos(event);
                 const gridX = Math.floor(touchPos.x / BLOCK_SIZE);
                 const gridY = Math.floor(touchPos.y / BLOCK_SIZE);
                 
                 hoverPosition = { x: gridX, y: gridY };
-                displayOffset = calculateDisplayOffset(touchPos.x, touchPos.y);
                 drawBoard();
             });
             
             canvas.addEventListener('touchmove', (event) => {
-                if (gameOver) return;
+                if (gameOver || !touchActive) return;
                 event.preventDefault();
                 
                 const touchPos = getTouchPos(event);
@@ -817,23 +930,21 @@
                 const gridY = Math.floor(touchPos.y / BLOCK_SIZE);
                 
                 hoverPosition = { x: gridX, y: gridY };
-                displayOffset = calculateDisplayOffset(touchPos.x, touchPos.y);
                 drawBoard();
             });
             
             canvas.addEventListener('touchend', (event) => {
-                if (gameOver) return;
+                if (gameOver || !touchActive) return;
                 event.preventDefault();
+                touchActive = false;
                 
                 if (hoverPosition.x >= 0 && hoverPosition.y >= 0) {
-                    // При размещении используем реальную позицию (без смещения)
                     if (placePiece(hoverPosition.x, hoverPosition.y)) {
                         drawBoard();
                     }
                 }
                 
                 hoverPosition = { x: -1, y: -1 };
-                displayOffset = { x: 0, y: 0 };
                 drawBoard();
             });
         }
@@ -846,7 +957,14 @@
         function showGameOver() {
             document.getElementById('finalScore').textContent = score;
             document.getElementById('gameOver').style.display = 'block';
-            saveBestScore();
+            document.getElementById('playerName').value = '';
+        }
+
+        function saveRecordAndRestart() {
+            const playerName = document.getElementById('playerName').value;
+            saveRecord(playerName, score);
+            document.getElementById('gameOver').style.display = 'none';
+            restartGame();
         }
 
         function restartGame() {
@@ -854,23 +972,18 @@
             initGame();
         }
 
-        // ===== СИСТЕМА РЕКОРДОВ =====
-        function saveBestScore() {
-            const bestScore = localStorage.getItem('blockPuzzleBestScore') || 0;
-            if (score > bestScore) {
-                localStorage.setItem('blockPuzzleBestScore', score);
-                document.getElementById('bestScoreMenu').textContent = score;
-            }
-        }
-
-        function loadBestScore() {
-            const bestScore = localStorage.getItem('blockPuzzleBestScore') || 0;
-            document.getElementById('bestScoreMenu').textContent = bestScore;
-        }
-
         // ===== ИНИЦИАЛИЗАЦИЯ =====
         document.addEventListener('DOMContentLoaded', function() {
-            loadBestScore();
+            updateBestScore();
+            // Предотвращаем масштабирование на мобильных
+            document.addEventListener('gesturestart', function(e) {
+                e.preventDefault();
+            });
+            document.addEventListener('touchmove', function(e) {
+                if (e.scale !== 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
         });
     </script>
 </body>
